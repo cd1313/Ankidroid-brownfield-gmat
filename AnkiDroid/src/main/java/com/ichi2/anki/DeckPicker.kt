@@ -1355,6 +1355,11 @@ open class DeckPicker :
                 createBackup()
                 return true
             }
+            R.id.action_gmat_memory -> {
+                Timber.i("DeckPicker:: GMAT memory dashboard")
+                startActivity(Intent(this, GmatDashboardActivity::class.java))
+                return true
+            }
             else -> return super.onOptionsItemSelected(item)
         }
     }

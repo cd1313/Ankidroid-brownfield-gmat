@@ -68,6 +68,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.lang.annotations.Language
+import org.json.JSONObject
 import timber.log.Timber
 import com.ichi2.anki.common.destinations.Destination as NavigateDestination
 
@@ -106,6 +107,10 @@ class ReviewerViewModel(
     val setDueDateFlow = MutableSharedFlow<CardId>()
     val resetProgressFlow = MutableSharedFlow<Unit>()
     val answerFeedbackFlow = MutableSharedFlow<Rating>()
+
+    /** Hides the whole answer area (Show Answer + ease buttons) for GMAT practice pool cards,
+     *  which are graded by tapping an option, not by self-rating. */
+    val hideAnswerAreaFlow = MutableStateFlow(false)
     val voiceRecorderEnabledFlow = MutableStateFlow(repository.isRecordVoiceEnabled)
     val whiteboardEnabledFlow = MutableStateFlow(repository.isWhiteboardEnabled)
     val replayVoiceFlow = MutableSharedFlow<Unit>()
@@ -202,6 +207,10 @@ class ReviewerViewModel(
      */
     private suspend fun showAnswerInternal() {
         Timber.v("ReviewerViewModel::onShowAnswer")
+        // Any GMAT MCQ card (pool mode OR served by the scheduler in parent-deck study)
+        // reveals inline after grading; the reviewer's Show Answer / ease buttons are inert
+        // so FSRS is never touched.
+        if (isGmatPractice() || isMcqCard()) return
         mutationSignal.await()
 
         val typedAnswerResult = CompletableDeferred<String>()
@@ -444,12 +453,35 @@ class ReviewerViewModel(
                 isInputFocused = false
                 return byteArrayOf()
             }
+            "gmatGradeMcq" -> return gmatGradeMcq(bytes)
+            "gmatPracticeContinue" -> return gmatPracticeContinue()
         }
         return when (uri.backendMethodName) {
             "getSchedulingStatesWithContext" -> getSchedulingStatesWithContext()
             "setSchedulingStates" -> setSchedulingStates(bytes)
             else -> super.handlePostRequest(uri, bytes)
         }
+    }
+
+    /**
+     * GMAT MCQ objective grading. Compares the chosen option to the stored answer
+     * via the shared engine's `grade_mcq` RPC (no self-grade, no FSRS side effects)
+     * and returns `{correct, correctAnswer}` for the card template to reveal.
+     * `tookMillis` (answer latency, sent by the template) is passed through so the
+     * attempt is logged as the IRT performance model's input.
+     */
+    private suspend fun gmatGradeMcq(bytes: ByteArray): ByteArray {
+        val json = JSONObject(bytes.decodeToString())
+        val chosen = json.optString("chosen", "")
+        val tookMillis = json.optInt("tookMillis", 0)
+        val cardId = currentCard.await().id
+        val response =
+            withCol { backend.gradeMcq(cardId = cardId, chosen = chosen, tookMillis = tookMillis) }
+        return JSONObject()
+            .put("correct", response.correct)
+            .put("correctAnswer", response.correctAnswer)
+            .toString()
+            .toByteArray()
     }
 
     override suspend fun showQuestion() {
@@ -506,6 +538,9 @@ class ReviewerViewModel(
 
     private suspend fun answerCardInternal(rating: Rating) {
         Timber.v("ReviewerViewModel::answerCard")
+        // GMAT MCQ cards are graded objectively and never scheduled through FSRS —
+        // in any deck, including parent-deck study.
+        if (isGmatPractice() || isMcqCard()) return
         val state = queueState.await() ?: return
         val card = currentCard.await()
         val answer =
@@ -562,6 +597,10 @@ class ReviewerViewModel(
 
     private suspend fun updateCurrentCard() {
         Timber.v("ReviewerViewModel::updateCurrentCard")
+        if (isGmatPractice()) {
+            updateGmatPracticeCard()
+            return
+        }
         queueState =
             asyncIO {
                 withCol {
@@ -579,6 +618,9 @@ class ReviewerViewModel(
         }
 
         val card = state.topCard
+        // Hide the answer area for an MCQ card even when the scheduler serves it
+        // (parent-deck study), not just in pool mode.
+        hideAnswerAreaFlow.value = isMcqCard(card)
         currentCard = CompletableDeferred(card)
         setupAnswerTimer(card)
         autoAdvance.onCardChange(card)
@@ -589,6 +631,78 @@ class ReviewerViewModel(
         canSuspendNoteFlow.emit(isSuspendNoteAvailable(card))
         countsFlow.emit(StudyCounts(state))
     }
+
+    // region GMAT practice pool
+    // GMAT::Practice MCQs bypass FSRS entirely: instead of the scheduler queue they are
+    // drawn randomly-without-replacement per cycle from the shared engine
+    // (next_practice_card / mark_practice_done). This mirrors the desktop pool mode in
+    // qt/aqt/gmat.py so behaviour is identical across platforms.
+    private val gmatPracticeSearch = """deck:"GMAT::Practice" note:"GMAT MCQ""""
+
+    // Section-level tag prefix; enables IRT-weighted selection (weakest section,
+    // at your level) in the shared engine.
+    private val gmatTagPrefix = "GMAT"
+    private val gmatCycleKey = "gmat_practice_cycle"
+
+    private suspend fun isGmatPractice(): Boolean = withCol { decks.name(decks.selected()) } == "GMAT::Practice"
+
+    /** True when the card is a GMAT practice MCQ (by note type) — regardless of the
+     *  deck being studied. Used to keep practice cards out of FSRS even under
+     *  parent-deck study. */
+    private suspend fun isMcqCard(card: Card): Boolean = withCol { card.noteType(this).name } == "GMAT MCQ"
+
+    private suspend fun isMcqCard(): Boolean = isMcqCard(currentCard.await())
+
+    private suspend fun gmatCycle(): Int = withCol { config.get<Int>(gmatCycleKey) } ?: 1
+
+    private suspend fun updateGmatPracticeCard() {
+        Timber.v("ReviewerViewModel::updateGmatPracticeCard")
+        val cycle = gmatCycle()
+        val response =
+            withCol {
+                backend.nextPracticeCard(
+                    search = gmatPracticeSearch,
+                    cycle = cycle,
+                    tagPrefix = gmatTagPrefix,
+                )
+            }
+        if (response.exhausted) {
+            // Cycle complete: bump the counter so the next entry reshuffles the full pool.
+            withCol { config.set(gmatCycleKey, cycle + 1) }
+            actionFeedbackFlow.emit("Practice complete — the pool resets next time")
+            finishResultFlow.emit(RESULT_NO_MORE_CARDS)
+            return
+        }
+        hideAnswerAreaFlow.value = true
+        val card = withCol { getCard(response.cardId) }
+        currentCard = CompletableDeferred(card)
+        setupAnswerTimer(card)
+        autoAdvance.onCardChange(card)
+        onCardUpdatedFlow.emit(Unit) // must be before showQuestion()
+        showQuestion()
+        loadAndPlayMedia(CardSide.QUESTION)
+        canBuryNoteFlow.emit(isBuryNoteAvailable(card))
+        canSuspendNoteFlow.emit(isSuspendNoteAvailable(card))
+    }
+
+    /**
+     * Answer-side after grading an MCQ card. In direct pool study, mark it done for the
+     * cycle. If instead the card was served by the normal scheduler (parent-deck study),
+     * bury it — never FSRS-answer it — so the queue advances without rescheduling. Then
+     * serve the next card.
+     */
+    private suspend fun gmatPracticeContinue(): ByteArray {
+        val cardId = currentCard.await().id
+        if (isGmatPractice()) {
+            val cycle = gmatCycle()
+            withCol { backend.markPracticeDone(cardId = cardId, cycle = cycle) }
+        } else {
+            withCol { sched.buryCards(listOf(cardId)) }
+        }
+        updateCurrentCard()
+        return byteArrayOf()
+    }
+    // endregion
 
     override suspend fun typeAnsFilter(text: String): String {
         Timber.v("ReviewerViewModel::typeAnsFilter")

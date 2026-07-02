@@ -381,6 +381,12 @@ class ReviewerFragment :
         if (Prefs.hideHardAndEasyButtons) {
             binding.answerArea.hideHardAndEasyButtons()
         }
+
+        // GMAT practice pool cards are graded by tapping an option, so the answer area
+        // (Show Answer + ease buttons) is hidden entirely for them.
+        viewModel.hideAnswerAreaFlow.collectLatestIn(lifecycleScope) { hide ->
+            binding.answerArea.isVisible = !hide
+        }
     }
 
     private fun setupCounts() {
