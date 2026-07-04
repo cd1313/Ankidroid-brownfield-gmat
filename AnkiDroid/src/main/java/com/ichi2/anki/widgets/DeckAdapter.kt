@@ -167,13 +167,51 @@ class DeckAdapter(
         binding.deckName.text = node.lastDeckNameComponent
         binding.deckName.setTextColor(if (node.filtered) deckNameDynColor else deckNameDefaultColor)
 
-        // Set the card counts and their colors
-        binding.deckNew.text = node.newCount.toString()
-        binding.deckNew.setTextColor(if (node.newCount == 0) zeroCountColor else newCountColor)
-        binding.deckLearn.text = node.lrnCount.toString()
-        binding.deckLearn.setTextColor(if (node.lrnCount == 0) zeroCountColor else learnCountColor)
-        binding.deckReview.text = node.revCount.toString()
-        binding.deckReview.setTextColor(if (node.revCount == 0) zeroCountColor else reviewCountColor)
+        // Set the card counts and their colors.
+        // GMAT MCQ practice is a drill, not FSRS — its new/learn/review counts are
+        // meaningless, so blank them out (the daily practice quota lives on the GMAT hub).
+        val isGmatPractice =
+            node.fullDeckName == "GMAT::Practice" || node.fullDeckName.startsWith("GMAT::Practice::")
+        if (isGmatPractice) {
+            binding.deckNew.text = "–"
+            binding.deckNew.setTextColor(zeroCountColor)
+            binding.deckLearn.text = "–"
+            binding.deckLearn.setTextColor(zeroCountColor)
+            binding.deckReview.text = "–"
+            binding.deckReview.setTextColor(zeroCountColor)
+        } else {
+            // An ancestor row of practice (e.g. "GMAT") shows its FSRS children only,
+            // by summing its immediate non-practice children — matching the blanked
+            // practice rows and avoiding daily-limit cap inconsistencies. (Practice is
+            // a direct child of GMAT, so immediate children suffice.)
+            var newCount = node.newCount
+            var lrnCount = node.lrnCount
+            var revCount = node.revCount
+            val prefix = node.fullDeckName + "::"
+            if ("GMAT::Practice".startsWith(prefix)) {
+                val immediateChildren =
+                    currentList.filter {
+                        it.fullDeckName.startsWith(prefix) &&
+                            !it.fullDeckName.removePrefix(prefix).contains("::")
+                    }
+                if (immediateChildren.isNotEmpty()) {
+                    val fsrs =
+                        immediateChildren.filter {
+                            it.fullDeckName != "GMAT::Practice" &&
+                                !it.fullDeckName.startsWith("GMAT::Practice::")
+                        }
+                    newCount = fsrs.sumOf { it.newCount }
+                    lrnCount = fsrs.sumOf { it.lrnCount }
+                    revCount = fsrs.sumOf { it.revCount }
+                }
+            }
+            binding.deckNew.text = newCount.toString()
+            binding.deckNew.setTextColor(if (newCount == 0) zeroCountColor else newCountColor)
+            binding.deckLearn.text = lrnCount.toString()
+            binding.deckLearn.setTextColor(if (lrnCount == 0) zeroCountColor else learnCountColor)
+            binding.deckReview.text = revCount.toString()
+            binding.deckReview.setTextColor(if (revCount == 0) zeroCountColor else reviewCountColor)
+        }
 
         holder.binding.deckLayout.setOnClickListener { onDeckSelected(node.did) }
         holder.binding.deckLayout.setOnLongClickListener {

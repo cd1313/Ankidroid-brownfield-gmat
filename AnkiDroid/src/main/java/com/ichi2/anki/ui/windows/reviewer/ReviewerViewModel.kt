@@ -10,6 +10,7 @@ import anki.frontend.SetSchedulingStatesRequest
 import anki.scheduler.CardAnswer.Rating
 import com.ichi2.anki.AbstractFlashcardViewer
 import com.ichi2.anki.AbstractFlashcardViewer.Companion.RESULT_NO_MORE_CARDS
+import com.ichi2.anki.AnkiDroidApp
 import com.ichi2.anki.CollectionManager.TR
 import com.ichi2.anki.CollectionManager.withCol
 import com.ichi2.anki.Flag
@@ -23,6 +24,7 @@ import com.ichi2.anki.common.destinations.CardInfoDestination.EntryPoint
 import com.ichi2.anki.common.destinations.DeckOptionsDestination
 import com.ichi2.anki.common.destinations.DeckOptionsEntry
 import com.ichi2.anki.common.destinations.StatisticsDestination
+import com.ichi2.anki.gmat.GmatAi
 import com.ichi2.anki.launchCatchingIO
 import com.ichi2.anki.libanki.Card
 import com.ichi2.anki.libanki.CardId
@@ -62,10 +64,12 @@ import com.ichi2.anki.utils.ext.getLongOrNull
 import com.ichi2.anki.utils.ext.setUserFlagForCards
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.intellij.lang.annotations.Language
 import org.json.JSONObject
@@ -225,6 +229,12 @@ class ReviewerViewModel(
 
         updateNextTimes()
         showAnswer()
+        // GMAT::Terms typed recall: an AI study buddy grades the typed answer for
+        // meaning, suggests the FSRS rating, and explains why. Async + fail-safe; the
+        // user still taps the rating (matching the desktop "don't auto-advance" choice).
+        if (typeAnswerFlow.value != null && GmatAi.aiEnabled(gmatContext) && isGmatTermCard()) {
+            maybeAiGradeTerm(typeAnswerFlow.value!!.expectedAnswer, typedAnswer)
+        }
         loadAndPlayMedia(CardSide.ANSWER)
         if (!autoAdvance.shouldWaitForAudio()) {
             autoAdvance.onShowAnswer()
@@ -477,12 +487,122 @@ class ReviewerViewModel(
         val cardId = currentCard.await().id
         val response =
             withCol { backend.gradeMcq(cardId = cardId, chosen = chosen, tookMillis = tookMillis) }
+        // On a wrong answer, a study-buddy peer explains the mistake (with an optional
+        // diagram) — mirrors the desktop peer-guidance panel. Async + fail-safe.
+        if (!response.correct && GmatAi.aiEnabled(gmatContext)) {
+            maybeEmitPeerGuidance(cardId, chosen, response.correctAnswer)
+        }
         return JSONObject()
             .put("correct", response.correct)
             .put("correctAnswer", response.correctAnswer)
             .toString()
             .toByteArray()
     }
+
+    // region GMAT AI (term grading + peer guidance)
+    private val gmatContext get() = AnkiDroidApp.instance
+
+    /** Field name -> value for a card's note. Empty map on failure. */
+    private suspend fun gmatFieldMap(cardId: CardId): Map<String, String> =
+        withCol {
+            try {
+                val note = getCard(cardId).note(this)
+                note.notetype.fieldsNames
+                    .zip(note.fields)
+                    .toMap()
+            } catch (e: Exception) {
+                emptyMap()
+            }
+        }
+
+    /** Inject/replace a panel div in the card webview with the given HTML. */
+    private suspend fun injectGmatPanel(
+        id: String,
+        html: String,
+    ) {
+        val js =
+            "(function(){var e=document.getElementById(${JSONObject.quote(id)});" +
+                "if(!e){e=document.createElement('div');e.id=${JSONObject.quote(id)};" +
+                "document.body.appendChild(e);}e.innerHTML=${JSONObject.quote(html)};" +
+                "e.scrollIntoView({behavior:'smooth',block:'nearest'});})();"
+        eval.emit(js)
+    }
+
+    private fun maybeEmitPeerGuidance(
+        cardId: CardId,
+        chosen: String,
+        correctAnswer: String,
+    ) {
+        launchCatchingIO {
+            val f = gmatFieldMap(cardId)
+            val question = f["Question"]?.trim().orEmpty()
+            if (question.isEmpty()) return@launchCatchingIO
+            val options =
+                listOf("A", "B", "C", "D", "E").mapNotNull { l ->
+                    f[l]?.takeIf { it.isNotBlank() }?.let { l to it }
+                }
+            val explanation = f["Explanation"]?.trim().orEmpty()
+            val reply =
+                withContext(Dispatchers.IO) {
+                    GmatAi.peerExplain(gmatContext, question, options, correctAnswer, chosen, explanation)
+                } ?: return@launchCatchingIO
+            val body = StringBuilder()
+            body.append("<div style=\"font-weight:700;color:#d85a40;\">🐱 Study buddy</div>")
+            body.append("<div style=\"margin-top:6px;\">").append(escapeHtml(reply.text)).append("</div>")
+            if (reply.svg.isNotEmpty()) {
+                body.append("<div style=\"margin-top:8px;\">").append(reply.svg).append("</div>")
+            }
+            val panel =
+                "<div style=\"background:#fbf3ee;border:1px solid #f5eae3;border-radius:12px;" +
+                    "padding:12px 14px;margin:12px 0;color:#241f1c;\">$body</div>"
+            injectGmatPanel("gmat-peer", panel)
+        }
+    }
+
+    private fun escapeHtml(s: String): String = s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+    private suspend fun isGmatTermCard(): Boolean {
+        val card = currentCard.await()
+        val deck = withCol { decks.name(card.did) }
+        return deck.startsWith("GMAT::Terms")
+    }
+
+    private fun maybeAiGradeTerm(
+        expected: String,
+        typed: String,
+    ) {
+        launchCatchingIO {
+            val cardId = currentCard.await().id
+            val f = gmatFieldMap(cardId)
+            val question =
+                f.values
+                    .firstOrNull()
+                    ?.trim()
+                    .orEmpty()
+            val result =
+                withContext(Dispatchers.IO) {
+                    GmatAi.grade(gmatContext, question, expected, typed)
+                } ?: return@launchCatchingIO
+            val label = result.rating.replaceFirstChar { it.uppercase() }
+            val color =
+                when (result.rating) {
+                    "again" -> "#c0392b"
+                    "hard" -> "#b8860b"
+                    "good" -> "#2e7d32"
+                    else -> "#d85a40"
+                }
+            val body =
+                "<div style=\"font-weight:700;color:$color;\">🐱 Suggested rating: $label</div>" +
+                    "<div style=\"margin-top:6px;\">${escapeHtml(result.rationale)}</div>" +
+                    "<div style=\"margin-top:4px;opacity:.7;font-size:.9em;\">" +
+                    "Tap the $label button to continue.</div>"
+            val panel =
+                "<div style=\"background:#fbf3ee;border:1px solid #f5eae3;border-radius:12px;" +
+                    "padding:12px 14px;margin:12px 0;color:#241f1c;\">$body</div>"
+            injectGmatPanel("gmat-grade", panel)
+        }
+    }
+    // endregion
 
     override suspend fun showQuestion() {
         Timber.v("ReviewerViewModel::showQuestion")
@@ -695,6 +815,7 @@ class ReviewerViewModel(
         val cardId = currentCard.await().id
         if (isGmatPractice()) {
             val cycle = gmatCycle()
+            // Today's practice count is derived from the revlog, so nothing to record here.
             withCol { backend.markPracticeDone(cardId = cardId, cycle = cycle) }
         } else {
             withCol { sched.buryCards(listOf(cardId)) }

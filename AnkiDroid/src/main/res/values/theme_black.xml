@@ -8,9 +8,9 @@
 
     <style name="Base.Theme.Dark.Black" parent="Theme_Dark">
         <!-- Android colors -->
-        <item name="colorPrimary">@color/material_blue_400</item>
+        <item name="colorPrimary">@color/gmat_coral_4</item>
         <item name="colorPrimaryDark">@color/black</item>
-        <item name="colorAccent">@color/material_blue_500</item>
+        <item name="colorAccent">@color/gmat_coral_5</item>
         <item name="colorSecondaryContainer">#252525</item>
         <item name="colorSurfaceContainerHigh">#151515</item>
         <item name="android:textColor">@color/text_color_dark</item>
@@ -28,17 +28,17 @@
         <item name="actionModeBackground">@color/theme_black_primary_dark</item>
         <!-- Tab layout -->
         <item name="tabLayoutBackgroundColor">@color/theme_black_primary_dark</item>
-        <item name="tabActiveIconColor">@color/material_blue_500</item>
+        <item name="tabActiveIconColor">@color/gmat_coral_4</item>
         <!-- Deck list colors and divider -->
         <item name="currentDeckBackground">@drawable/item_background_selected</item>
         <item name="currentDeckBackgroundColor">@color/theme_black_row_current</item>
         <item name="focusedRowBackgroundColor">@color/theme_black_row_current</item>
-        <item name="dynDeckColor">@color/material_light_blue_500</item>
+        <item name="dynDeckColor">@color/gmat_coral_4</item>
         <item name="deckDivider">@drawable/divider_black</item>
         <item name="expandRef">@drawable/ic_chevron_right_white</item>
         <item name="collapseRef">@drawable/ic_expand_more_white</item>
         <!-- Count colors -->
-        <item name="newCountColor">@color/material_blue_600</item>
+        <item name="newCountColor">@color/gmat_coral_3</item>
         <item name="learnCountColor">@color/material_red_400</item>
         <item name="reviewCountColor">@color/material_green_400</item>
         <item name="buryCountColor">@color/disabled_gray_dark</item>
@@ -52,13 +52,13 @@
         <item name="againButtonTextColor">@color/material_red_400</item>
         <item name="hardButtonTextColor">@color/white</item>
         <item name="goodButtonTextColor">@color/material_green_400</item>
-        <item name="easyButtonTextColor">@color/material_blue_700</item>
+        <item name="easyButtonTextColor">@color/gmat_coral_7</item>
 
         <item name="alternativeBackgroundColor">#0C0C0C</item>
         <item name="againTextColor">@color/material_red_200</item>
         <item name="hardTextColor">@color/material_orange_200</item>
         <item name="goodTextColor">@color/material_light_green_200</item>
-        <item name="easyTextColor">@color/material_light_blue_A100</item>
+        <item name="easyTextColor">@color/gmat_coral_3</item>
         <item name="againBackgroundColor">#170e0e</item>
         <item name="hardBackgroundColor">#19120c</item>
         <item name="goodBackgroundColor">#0e1310</item>

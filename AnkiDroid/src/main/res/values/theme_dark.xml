@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="DuplicateCrowdInStrings">
-    <color name="theme_dark_primary">#3d3d3d</color>
+    <color name="theme_dark_primary">#2a2421</color>
     <color name="theme_dark_primary_dark">@color/material_grey_900</color>
     <color name="theme_dark_primary_light">@color/material_grey_800</color>
     <color name="theme_dark_primary_text">@color/white</color>
@@ -11,25 +11,25 @@
 
     <style name="Base.Theme.Dark" parent="@style/Theme.Material3.Dark.NoActionBar">
         <!-- Android colors -->
-        <item name="colorPrimary">@color/material_blue_400</item>
+        <item name="colorPrimary">@color/gmat_coral_4</item>
         <item name="colorOnPrimary">@color/white</item>
         <item name="colorPrimaryDark">@color/theme_dark_primary_dark</item>
         <item name="colorSurface">?android:colorBackground</item>
-        <item name="colorAccent">@color/material_blue_400</item>
+        <item name="colorAccent">@color/gmat_coral_4</item>
         <item name="colorOnSurface">@color/white</item>
         <item name="colorPrimaryContainer">@color/white</item> <!-- Switch thumb color when disabled and being pressed -->
         <item name="colorOnPrimaryContainer">@color/white</item> <!-- FAB icons -->
 
         <item name="android:textColor">@color/text_color_dark</item>
         <item name="android:textColorSecondary">@color/text_color_secondary_dark</item>
-        <item name="android:colorBackground">@color/material_theme_grey</item>
-        <item name="android:windowBackground">@color/material_theme_grey</item>
-        <item name="colorSecondaryContainer">#3C5A6E</item>
+        <item name="android:colorBackground">@color/gmat_warmdark_bg</item>
+        <item name="android:windowBackground">@color/gmat_warmdark_bg</item>
+        <item name="colorSecondaryContainer">#4a3d38</item>
         <item name="colorOnSecondaryContainer">@color/white</item>
 
         <item name="colorSurfaceContainerHighest">?attr/colorSurfaceContainer</item>
-        <item name="colorSurfaceContainerHigh">#424C54</item>
-        <item name="colorSurfaceContainer">#0F42A5F5</item>
+        <item name="colorSurfaceContainerHigh">@color/gmat_warmdark_elevated</item>
+        <item name="colorSurfaceContainer">#1FF9876F</item>
         <item name="colorSurfaceContainerLow">?android:attr/colorBackground</item>
         <!-- Widget colors -->
         <item name="widgetColorActivated">?attr/colorAccent</item>
@@ -51,17 +51,17 @@
         <item name="actionModeBackground">@color/theme_dark_primary</item>
         <!-- Tab layout -->
         <item name="tabLayoutBackgroundColor">@color/theme_dark_primary</item>
-        <item name="tabActiveIconColor">@color/material_blue_500</item>
+        <item name="tabActiveIconColor">@color/gmat_coral_4</item>
         <!-- Deck list colors and divider -->
         <item name="currentDeckBackground">@drawable/item_background_selected</item>
         <item name="currentDeckBackgroundColor">@color/theme_dark_row_current</item>
         <item name="focusedRowBackgroundColor">@color/theme_dark_row_current</item>
-        <item name="dynDeckColor">@color/material_light_blue_500</item>
+        <item name="dynDeckColor">@color/gmat_coral_4</item>
         <item name="deckDivider">@drawable/divider_dark</item>
         <item name="expandRef">@drawable/ic_chevron_right_white</item>
         <item name="collapseRef">@drawable/ic_expand_more_white</item>
         <!-- Count colors -->
-        <item name="newCountColor">@color/material_indigo_200</item>
+        <item name="newCountColor">@color/gmat_coral_3</item>
         <item name="learnCountColor">@color/material_red_200</item>
         <item name="reviewCountColor">@color/material_green_200</item>
         <item name="buryCountColor">@color/disabled_gray_dark</item>
@@ -71,7 +71,7 @@
         <item name="againButtonBackground">@color/material_red_800</item>
         <item name="hardButtonBackground">@color/material_blue_grey_800</item>
         <item name="goodButtonBackground">@color/material_green_800</item>
-        <item name="easyButtonBackground">@color/material_light_blue_800</item>
+        <item name="easyButtonBackground">@color/gmat_coral_8</item>
         <item name="topBarColor">@color/theme_dark_primary_light</item>
         <item name="maxTimerColor">@color/material_red_300</item>
         <item name="answerButtonTextColor">@color/white</item>
@@ -84,11 +84,11 @@
         <item name="againTextColor">@color/material_red_200</item>
         <item name="hardTextColor">@color/material_orange_200</item>
         <item name="goodTextColor">@color/material_light_green_200</item>
-        <item name="easyTextColor">@color/material_light_blue_A100</item>
+        <item name="easyTextColor">@color/gmat_coral_3</item>
         <item name="againBackgroundColor">#462828</item>
         <item name="hardBackgroundColor">#4e3122</item>
         <item name="goodBackgroundColor">#2c3b2c</item>
-        <item name="easyBackgroundColor">#223946</item>
+        <item name="easyBackgroundColor">#4a2f26</item>
         <item name="againIconColor">?againTextColor</item>
         <item name="hardIconColor">?hardTextColor</item>
         <item name="goodIconColor">?goodTextColor</item>
@@ -112,15 +112,15 @@
         <!-- Note editor colors -->
         <item name="duplicateColor">#855</item>
         <item name="editTextBackgroundColor">#EE5C5C5C</item>
-        <item name="editTextHighlightColor">@color/material_light_blue_900</item>
+        <item name="editTextHighlightColor">@color/gmat_coral_8</item>
         <item name="toolbarBackgroundColor">#616161</item>
         <item name="toolbarIconColor">@color/white</item>
         <item name="buttonShadowColor">#bdbdbd</item>
         <item name="buttonRippleColor">#BABABA</item>
         <item name="buttonForegroundColor">#757575</item>
         <!-- FAB -->
-        <item name="fab_normal">@color/material_light_blue_700</item>
-        <item name="fab_pressed">@color/material_light_blue_900</item>
+        <item name="fab_normal">@color/gmat_coral_6</item>
+        <item name="fab_pressed">@color/gmat_coral_8</item>
         <!-- Images -->
         <item name="navDrawerImage">@drawable/nav_drawer_logo_dark_theme</item>
         <!-- Dialog styles -->
@@ -149,7 +149,7 @@
         <item name="snackbarTextViewStyle">@style/Widget.MaterialComponents.Snackbar.TextView</item>
         <item name="snackbarButtonStyle">@style/SnackbarButtonStyle</item>
         <item name="snackbarBackgroundTintColor">#cfcfcf</item>
-        <item name="snackbarButtonTextColor">@color/material_light_blue_900</item>
+        <item name="snackbarButtonTextColor">@color/gmat_coral_4</item>
 
         <!-- Introduction -->
         <item name="introductionLogoTransparent">#883d3d3d</item>
@@ -161,7 +161,7 @@
 
         <!-- ProgressDialog-->
         <item name="dialogBackground">#ff303030</item>
-        <item name="progressDialogButtonTextColor">@color/material_light_blue_400</item>
+        <item name="progressDialogButtonTextColor">@color/gmat_coral_4</item>
 
         <item name="checkMediaListBackground">@color/material_grey_700</item>
         <item name="checkMediaListForeground">@color/white</item>

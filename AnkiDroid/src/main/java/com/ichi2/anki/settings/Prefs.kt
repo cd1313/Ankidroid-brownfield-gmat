@@ -404,7 +404,10 @@ open class PrefsRepository(
         get() = getBoolean(R.string.developer_options_enabled_by_user_key, false) || BuildConfig.DEBUG
         set(value) = putBoolean(R.string.developer_options_enabled_by_user_key, value)
 
-    var isNewStudyScreenEnabled by booleanPref(R.string.new_reviewer_options_key, false)
+    // GMAT parity: the GMAT reviewer features (pool mode, MCQ grading, AI term grading,
+    // peer guidance) and the themed card visuals only run in the new study screen, so it
+    // defaults on in this fork.
+    var isNewStudyScreenEnabled by booleanPref(R.string.new_reviewer_options_key, true)
 
     val devIsCardBrowserFragmented: Boolean
         get() = getBoolean(R.string.dev_card_browser_fragmented, false)

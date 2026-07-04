@@ -76,5 +76,27 @@
     <color name="idle_divider_color">#C7C7C7</color>
     <color name="drag_divider_color">#1A90FF</color>
     <color name="divider_handle_color">#4D4D4D</color>
+
+    <!-- GMAT peach/coral theme palette (mirrors desktop ts/lib/sass/_color-palette.scss).
+         coral = primary, rose = secondary, warmgray = light neutrals, warmdark = dark neutrals. -->
+    <color name="gmat_coral_0">#fff1ec</color>
+    <color name="gmat_coral_1">#ffe0d6</color>
+    <color name="gmat_coral_2">#ffc9b8</color>
+    <color name="gmat_coral_3">#ffab92</color>
+    <color name="gmat_coral_4">#fc9680</color>
+    <color name="gmat_coral_5">#f9876f</color>
+    <color name="gmat_coral_6">#ef6f54</color>
+    <color name="gmat_coral_7">#d85a40</color>
+    <color name="gmat_coral_8">#b34732</color>
+    <color name="gmat_coral_9">#8f3928</color>
+    <color name="gmat_rose_5">#d5747b</color>
+    <color name="gmat_rose_3">#eeaab0</color>
+    <color name="gmat_warmgray_0">#fffcfa</color>
+    <color name="gmat_warmgray_1">#fff8f4</color>
+    <color name="gmat_warmgray_2">#fbf3ee</color>
+    <color name="gmat_warmgray_3">#f5eae3</color>
+    <color name="gmat_warmdark_bg">#221d1b</color>
+    <color name="gmat_warmdark_surface">#2a2421</color>
+    <color name="gmat_warmdark_elevated">#332d2a</color>
 </resources>
 

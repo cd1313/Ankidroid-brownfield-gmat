@@ -16,7 +16,7 @@
     <SwitchPreferenceCompat
         android:key="@string/new_reviewer_options_key"
         android:title="@string/new_study_screen"
-        android:defaultValue="false"
+        android:defaultValue="true"
         search:ignore="true"
         />
 

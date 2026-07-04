@@ -110,6 +110,9 @@
             android:name="com.ichi2.anki.GmatDashboardActivity"
             android:exported="false"/>
         <activity
+            android:name="com.ichi2.anki.gmat.CorrectPeerActivity"
+            android:exported="false"/>
+        <activity
             android:name="com.ichi2.anki.IntentHandler"
             android:configChanges="keyboardHidden|orientation|screenSize"
             android:theme="@android:style/Theme.Translucent.NoTitleBar"

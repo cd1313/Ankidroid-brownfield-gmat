@@ -157,8 +157,32 @@ class DeckPickerViewModel :
     val flowOfCardsDue =
         combine(flowOfDeckDueTree, flowOfDeckListInInitialState) { tree, inInitialState ->
             if (tree == null || inInitialState != false) return@combine null
-            tree.newCount + tree.revCount + tree.lrnCount
+            // GMAT MCQ practice is a drill, not spaced repetition — keep it out of the
+            // "N cards due" total (it has its own daily quota on the GMAT hub). Sum the
+            // non-practice subtrees so daily-limit capping stays consistent.
+            tree.children.sumOf {
+                val (n, l, r) = it.countsExcludingPractice()
+                n + l + r
+            }
         }
+
+    /** (new, learn, review) for this node with the GMAT::Practice subtree removed. */
+    private fun DeckNode.countsExcludingPractice(): Triple<Int, Int, Int> {
+        if (fullDeckName == "GMAT::Practice") return Triple(0, 0, 0)
+        if ("GMAT::Practice".startsWith("$fullDeckName::")) {
+            var n = 0
+            var l = 0
+            var r = 0
+            for (child in children) {
+                val (cn, cl, cr) = child.countsExcludingPractice()
+                n += cn
+                l += cl
+                r += cr
+            }
+            return Triple(n, l, r)
+        }
+        return Triple(newCount, lrnCount, revCount)
+    }
 
     /** "Studied N cards in 0 seconds today */
     val flowOfStudiedTodayStats = MutableStateFlow("")
