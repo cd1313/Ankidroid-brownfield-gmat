@@ -92,7 +92,7 @@
         <item name="fab_normal">#ff303030</item>
         <item name="fab_pressed">#c8303030</item> <!-- 55 less opacity than fab_normal -->
         <!-- Images -->
-        <item name="navDrawerImage">@drawable/nav_drawer_logo_black_theme</item>
+        <item name="navDrawerImage">@drawable/catalyst_nav_header</item>
         <!-- Dialog styles -->
         <item name="android:listPreferredItemHeight">56dip</item>
         <item name="alertDialogTheme">@style/ThemeOverlay.AnkiDroid.AlertDialog.Black</item>

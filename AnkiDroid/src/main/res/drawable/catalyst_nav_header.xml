@@ -1,0 +1,25 @@
+<!-- CATalyst GMAT Prep navigation-drawer header: white cat on the brand coral.
+     Background is bound to ?attr/colorPrimary so it tracks the app bar in every
+     theme (light/dark/black). CentreCropped into the 150dp banner. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="300dp"
+    android:height="150dp"
+    android:viewportWidth="300"
+    android:viewportHeight="150">
+  <path android:pathData="M0,0 h300 v150 h-300 z" android:fillColor="?attr/colorPrimary"/>
+  <group
+      android:translateX="114"
+      android:translateY="39"
+      android:scaleX="0.6"
+      android:scaleY="0.6">
+    <path android:pathData="M28,40 L24,12 L52,30 Z" android:fillColor="#ffffff"/>
+    <path android:pathData="M92,40 L96,12 L68,30 Z" android:fillColor="#ffffff"/>
+    <path android:pathData="M60,28 m-42,38 a42,38 0,1 0,84 0 a42,38 0,1 0,-84 0"
+        android:fillColor="#ffffff"/>
+    <path android:pathData="M45,60 m-10,0 a10,10 0,1 0,20 0 a10,10 0,1 0,-20 0"
+        android:fillColor="?attr/colorPrimary"/>
+    <path android:pathData="M75,60 m-10,0 a10,10 0,1 0,20 0 a10,10 0,1 0,-20 0"
+        android:fillColor="?attr/colorPrimary"/>
+    <path android:pathData="M56,74 L64,74 L60,80 Z" android:fillColor="?attr/colorPrimary"/>
+  </group>
+</vector>

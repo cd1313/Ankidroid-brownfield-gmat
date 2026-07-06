@@ -16,6 +16,10 @@
 -->
 <resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation,DuplicateCrowdInStrings">
 
+    <!-- GMAT fork: title for the deck-picker overflow item opening the GMAT dashboard -->
+    <string name="gmat_menu_title" maxLength="28" comment="Deck-picker overflow item opening the GMAT dashboard">GMAT</string>
+
+
     <!--
         WARNING: These values here match static values defined in Deck.java DO
         NOT edit them, unless you change their corresponding values

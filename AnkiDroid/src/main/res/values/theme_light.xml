@@ -115,7 +115,7 @@
         <item name="fab_normal">@color/gmat_coral_6</item>
         <item name="fab_pressed">@color/gmat_coral_8</item>
         <!-- Images -->
-        <item name="navDrawerImage">@drawable/nav_drawer_logo</item>
+        <item name="navDrawerImage">@drawable/catalyst_nav_header</item>
         <!-- Dialog styles -->
         <item name="android:listPreferredItemHeight">56dip</item>
         <item name="dialogCornerRadius">@dimen/dialog_corner_radius</item>

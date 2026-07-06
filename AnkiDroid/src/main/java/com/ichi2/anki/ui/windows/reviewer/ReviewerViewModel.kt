@@ -227,13 +227,18 @@ class ReviewerViewModel(
             typedAnswerResult.await()
         } ?: ""
 
+        // Capture the type-answer BEFORE showAnswer(): rendering the answer side runs
+        // typeAnsFilter, which resets typeAnswerFlow to null, so reading it afterwards
+        // would always skip GMAT AI grading.
+        val expectedAnswer = typeAnswerFlow.value?.expectedAnswer
+
         updateNextTimes()
         showAnswer()
         // GMAT::Terms typed recall: an AI study buddy grades the typed answer for
         // meaning, suggests the FSRS rating, and explains why. Async + fail-safe; the
         // user still taps the rating (matching the desktop "don't auto-advance" choice).
-        if (typeAnswerFlow.value != null && GmatAi.aiEnabled(gmatContext) && isGmatTermCard()) {
-            maybeAiGradeTerm(typeAnswerFlow.value!!.expectedAnswer, typedAnswer)
+        if (expectedAnswer != null && GmatAi.aiEnabled(gmatContext) && isGmatTermCard()) {
+            maybeAiGradeTerm(expectedAnswer, typedAnswer)
         }
         loadAndPlayMedia(CardSide.ANSWER)
         if (!autoAdvance.shouldWaitForAudio()) {

@@ -348,11 +348,11 @@ class GmatDashboardActivity : AnkiActivity() {
 
     private fun renderSectionCards(
         memory: List<anki.gmat.TopicMastery>,
-        readiness: List<anki.gmat.SectionReadiness>,
+        readiness: anki.gmat.ReadinessResponse,
     ) {
         sectionsContainer.removeAllViews()
         val memoryByTopic = memory.associateBy { it.topic }
-        val readinessBySection = readiness.associateBy { it.section }
+        val readinessBySection = readiness.sectionsList.associateBy { it.section }
         val sections = (memoryByTopic.keys + readinessBySection.keys).toSortedSet()
         if (sections.isEmpty()) {
             sectionsContainer.addView(
@@ -420,13 +420,20 @@ class GmatDashboardActivity : AnkiActivity() {
                                 }
                             addView(metricRow("Performance", performanceValue))
 
-                            // Readiness row
+                            // Readiness row. The outline-coverage gate (§7c) is
+                            // enforced by the shared engine via coverageOk: a
+                            // section that skips too much of its official outline
+                            // abstains even when it has enough responses.
                             val readinessValue =
-                                if (r != null && r.hasScore) {
+                                if (r != null && r.hasScore && r.coverageOk) {
                                     val score = Math.round(r.score)
                                     val lo = Math.round(r.scoreLow)
                                     val hi = Math.round(r.scoreHigh)
                                     "$score  ($lo–$hi) · ${r.confidence} confidence"
+                                } else if (r != null && r.hasScore && !r.coverageOk) {
+                                    val covered = r.outlineCovered
+                                    val total = r.outlineTotal
+                                    "No score: only $covered/$total outline topics covered"
                                 } else {
                                     "Not enough data yet"
                                 }
@@ -436,5 +443,70 @@ class GmatDashboardActivity : AnkiActivity() {
                 },
             )
         }
+
+        // Projected overall score, summarised above the per-section cards. The
+        // score, range, and abstain rule all come from the shared Rust engine
+        // (single source of truth for the 205–805 total formula).
+        sectionsContainer.addView(overallCard(readiness.overall), 0)
     }
+
+    /** Card showing the engine's projected overall score (+range/margin). */
+    private fun overallCard(overall: anki.gmat.OverallReadiness): View =
+        card().apply {
+            addView(
+                LinearLayout(context).apply {
+                    orientation = LinearLayout.VERTICAL
+                    addView(
+                        TextView(context).apply {
+                            text = "Projected overall score"
+                            setTextColor(themeColor(androidx.appcompat.R.attr.colorPrimary))
+                            setTypeface(typeface, Typeface.BOLD)
+                            setTextSize(TypedValue.COMPLEX_UNIT_SP, 12f)
+                        },
+                    )
+                    if (!overall.hasScore) {
+                        addView(
+                            TextView(context).apply {
+                                text =
+                                    "Needs all ${overall.sectionsTotal} section scores " +
+                                    "(${overall.sectionsScored}/${overall.sectionsTotal} ready)"
+                                alpha = 0.7f
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, 14f)
+                                setPadding(0, dp(6), 0, 0)
+                            },
+                        )
+                    } else {
+                        val moe =
+                            maxOf(
+                                overall.score - overall.scoreLow,
+                                overall.scoreHigh - overall.score,
+                            )
+                        addView(
+                            TextView(context).apply {
+                                text = "${overall.score}"
+                                setTypeface(typeface, Typeface.BOLD)
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, 34f)
+                                setPadding(0, dp(4), 0, 0)
+                            },
+                        )
+                        addView(
+                            TextView(context).apply {
+                                text = "range ${overall.scoreLow}–${overall.scoreHigh} (±$moe) · 205–805 scale"
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, 13f)
+                            },
+                        )
+                        addView(
+                            TextView(context).apply {
+                                text =
+                                    "(Quant + Verbal + Data Insights − 180) × 20/3 + 205, " +
+                                    "rounded to the nearest 5"
+                                alpha = 0.7f
+                                setTextSize(TypedValue.COMPLEX_UNIT_SP, 11f)
+                                setPadding(0, dp(3), 0, 0)
+                            },
+                        )
+                    }
+                },
+            )
+        }
 }

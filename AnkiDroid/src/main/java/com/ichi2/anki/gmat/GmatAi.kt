@@ -54,11 +54,21 @@ object GmatAi {
             ?.trim()
             ?.ifEmpty { null } ?: DEFAULT_MODEL
 
-    /** The master toggle is on. Does not check for a key. */
-    fun aiToggleOn(context: Context): Boolean = context.sharedPrefs().getBoolean(PREF_AI_ENABLED, false)
+    /** The hosted Firebase proxy is available (users get AI with no key of their own). */
+    fun proxyConfigured(): Boolean = GmatFirebase.configured()
 
-    /** AI is usable: master toggle on AND a key is present (mirrors desktop `ai_grading_enabled`). */
-    fun aiEnabled(context: Context): Boolean = aiToggleOn(context) && apiKey(context) != null
+    /** AI can run: the user set their own key, or the hosted proxy is configured. */
+    fun aiAvailable(context: Context): Boolean = apiKey(context) != null || proxyConfigured()
+
+    /**
+     * The master toggle is on. Defaults **on** when the proxy is configured (so a
+     * fresh install has AI out of the box); otherwise defaults off. A stored value
+     * (user flipped it) always wins.
+     */
+    fun aiToggleOn(context: Context): Boolean = context.sharedPrefs().getBoolean(PREF_AI_ENABLED, proxyConfigured())
+
+    /** AI is usable: master toggle on AND a key or the proxy is available. */
+    fun aiEnabled(context: Context): Boolean = aiToggleOn(context) && aiAvailable(context)
 
     // ---- data models -------------------------------------------------------
 
@@ -105,7 +115,7 @@ object GmatAi {
         expected: String,
         answer: String,
     ): GradeResult? {
-        if (apiKey(context) == null) return null
+        if (!aiAvailable(context)) return null
         val trimmed = answer.trim()
         if (trimmed.isEmpty()) {
             return GradeResult(false, "incorrect", "No answer was entered.", "again")
@@ -216,7 +226,25 @@ object GmatAi {
         userPrompt: String,
         timeoutSecs: Long = 15,
     ): JSONObject? {
-        val key = apiKey(context) ?: return null
+        // Route to OpenAI directly when the user supplied their own key (BYOK);
+        // otherwise go through the Firebase-backed proxy (anonymous auth + App
+        // Check), which holds the OpenAI key server-side. Returns null if neither
+        // is available so the caller falls back to normal behaviour.
+        val key = apiKey(context)
+        val url: String
+        val authHeaders = mutableMapOf<String, String>()
+        if (key != null) {
+            url = OPENAI_URL
+            authHeaders["Authorization"] = "Bearer $key"
+        } else if (GmatFirebase.configured()) {
+            val idToken = GmatFirebase.idTokenBlocking(context) ?: return null
+            url = GmatFirebase.proxyUrl
+            authHeaders["Authorization"] = "Bearer $idToken"
+            authHeaders["X-Gmat-Platform"] = "android"
+            GmatFirebase.appCheckTokenBlocking(context)?.let { authHeaders["X-Firebase-AppCheck"] = it }
+        } else {
+            return null
+        }
         return try {
             val payload =
                 JSONObject()
@@ -239,8 +267,8 @@ object GmatAi {
             val request =
                 Request
                     .Builder()
-                    .url(OPENAI_URL)
-                    .header("Authorization", "Bearer $key")
+                    .url(url)
+                    .apply { authHeaders.forEach { (k, v) -> header(k, v) } }
                     .post(payload.toString().toRequestBody(JSON))
                     .build()
             client.newCall(request).execute().use { resp ->

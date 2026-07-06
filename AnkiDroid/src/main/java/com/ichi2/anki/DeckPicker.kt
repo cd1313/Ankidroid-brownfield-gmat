@@ -63,6 +63,7 @@ import androidx.fragment.app.FragmentContainerView
 import androidx.fragment.app.commit
 import androidx.lifecycle.flowWithLifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ConcatAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
 import androidx.work.WorkInfo
@@ -144,6 +145,8 @@ import com.ichi2.anki.dialogs.customstudy.CustomStudyDialog.CustomStudyAction.Co
 import com.ichi2.anki.dialogs.setDeckPickerContextMenuResultListener
 import com.ichi2.anki.export.ExportDialogFragment
 import com.ichi2.anki.filtered.FilteredDeckOptionsFragment
+import com.ichi2.anki.gmat.GmatBuiltinDeck
+import com.ichi2.anki.gmat.GmatTagHelpFooterAdapter
 import com.ichi2.anki.introduction.CollectionPermissionScreenLauncher
 import com.ichi2.anki.introduction.hasCollectionStoragePermissions
 import com.ichi2.anki.libanki.DeckId
@@ -536,7 +539,9 @@ open class DeckPicker :
                     Timber.d("Right Click on deck recorded!! %d, %f %f", deckId, x, y)
                 },
             )
-        deckPickerBinding.decks.adapter = deckListAdapter
+        // Deck list, followed by a footer box explaining the GMAT tagging convention
+        // so it scrolls in just below the decks (mirrors the desktop deck-browser box).
+        deckPickerBinding.decks.adapter = ConcatAdapter(deckListAdapter, GmatTagHelpFooterAdapter())
 
         lifecycleScope.launch { applyDeckPickerBackground() }
 
@@ -824,6 +829,13 @@ open class DeckPicker :
                     // Must stay here: clearing in ViewModel would break cold start (collector is only active at RESUMED).
                     viewModel.flowOfStartupResponse.value = null
                     showStartupScreensAndDialogs(sharedPrefs(), 0)
+
+                    // Import the built-in GMAT deck once on a fresh collection (no-op afterwards).
+                    this@DeckPicker.launchCatchingTask {
+                        if (GmatBuiltinDeck.seedIfNeeded(this@DeckPicker)) {
+                            updateDeckList()
+                        }
+                    }
 
                     if (tryShowStudyOptionsPanel()) {
                         ResizablePaneManager(
